@@ -1,0 +1,179 @@
+@using System.Text.Json
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Manufacturer Dashboard";
+    var stock = ViewBag.Stock as List<JsonElement> ?? new List<JsonElement>();
+    var notifications = ViewBag.Notifications as List<JsonElement> ?? new List<JsonElement>();
+    var orders = ViewBag.Orders as List<JsonElement> ?? new List<JsonElement>();
+    var distributors = ViewBag.Distributors as List<JsonElement> ?? new List<JsonElement>();
+}
+
+@if (TempData["Success"] != null) { <div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div> }
+<div class="dashboard-header">
+    <h1><i class="fas fa-industry"></i> Manufacturer Dashboard</h1>
+    <p>Manage your stock, orders, and notifications</p>
+</div>
+<div class="tab-container">
+    <button class="tab active" onclick="showTab('stock', this)"><i class="fas fa-boxes"></i> My Stock</button>
+    <button class="tab" onclick="showTab('orders', this)"><i class="fas fa-shopping-cart"></i> Orders</button>
+    <button class="tab" onclick="showTab('notifications', this)"><i class="fas fa-bell"></i> Notifications (@notifications.Count)</button>
+</div>
+
+<div id="stock" class="tab-content">
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 1rem;"><i class="fas fa-plus-circle"></i> Add Product</h3>
+        <form asp-controller="ManufacturerStock" asp-action="Add" method="post" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+            <div>
+                <label>Product Name</label>
+                <input type="text" name="productName" required />
+            </div>
+            <div>
+                <label>Quantity</label>
+                <input type="number" name="quantity" min="1" required />
+            </div>
+            <div>
+                <label>Price ($)</label>
+                <input type="number" name="price" step="0.01" min="0" required />
+            </div>
+            <button type="submit"><i class="fas fa-plus"></i> Add</button>
+        </form>
+    </div>
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;"><i class="fas fa-boxes"></i> My Stock</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Actions</th></tr></thead>
+            <tbody>
+                @if (!stock.Any()) { <tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:2rem;">No products in stock. Add your first product above.</td></tr> }
+                @foreach (var item in stock)
+                {
+                    var id = item.TryGetProperty("inventoryId", out var i) ? i.GetInt32() : item.GetProperty("InventoryId").GetInt32();
+                    var name = item.TryGetProperty("productName", out var p) ? p.GetString() : item.GetProperty("ProductName").GetString();
+                    var qty = item.TryGetProperty("quantity", out var q) ? q.GetInt32() : item.GetProperty("Quantity").GetInt32();
+                    var pr = item.TryGetProperty("price", out var pr2) ? pr2.GetDecimal() : item.GetProperty("Price").GetDecimal();
+                    <tr>
+                        <td>@name</td>
+                        <td>@qty</td>
+                        <td>$@pr.ToString("N2")</td>
+                        <td>
+                            <a href="#" class="btn btn-outline btn-sm edit-btn" style="margin-right:0.5rem;" data-id="@id" data-name="@name" data-qty="@qty" data-price="@pr.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">Edit</a>
+                            <form asp-controller="ManufacturerStock" asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Delete?');">
+                                <input type="hidden" name="id" value="@id" />
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); z-index:100; align-items:center; justify-content:center;" class="modal-overlay">
+    <div class="card" style="max-width:400px;">
+        <h3>Edit Product</h3>
+        <form asp-controller="ManufacturerStock" asp-action="Update" method="post">
+            <input type="hidden" name="id" id="editId" />
+            <label>Product Name</label>
+            <input type="text" name="productName" id="editName" required />
+            <label>Quantity</label>
+            <input type="number" name="quantity" id="editQty" min="1" required />
+            <label>Price ($)</label>
+            <input type="number" name="price" id="editPrice" step="0.01" min="0" required />
+            <button type="submit" style="margin-top:1rem;">Update</button>
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="orders" class="tab-content" style="display:none;">
+    <div class="card" style="margin-bottom:1.5rem;">
+        <h3><i class="fas fa-envelope"></i> Send Message to Distributor (Order Completed)</h3>
+        @if (distributors.Any())
+        {
+            <form asp-controller="Message" asp-action="Send" method="post" style="display:grid; grid-template-columns:1fr 2fr auto; gap:1rem; align-items:end;">
+                <div>
+                    <label>To Distributor</label>
+                    <select name="toUserId" required>
+                        <option value="">-- Select --</option>
+                        @foreach (var d in distributors)
+                        {
+                            var did = d.TryGetProperty("userId", out var du) ? du.GetInt32() : d.GetProperty("UserId").GetInt32();
+                            var email = d.TryGetProperty("email", out var de) ? de.GetString() : d.GetProperty("Email").GetString();
+                            <option value="@did">@email</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label>Message (e.g., Order completed and ready for pickup)</label>
+                    <input type="text" name="content" placeholder="Your order has been completed..." required />
+                </div>
+                <button type="submit" class="btn btn-sm"><i class="fas fa-paper-plane"></i> Send</button>
+            </form>
+        }
+    </div>
+    <div class="card">
+        <h3>Orders from Distributors</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+                @if (!orders.Any()) { <tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:2rem;">No orders yet.</td></tr> }
+                @foreach (var o in orders)
+                {
+                    var oid = o.TryGetProperty("id", out var oi) ? oi.GetInt32() : o.GetProperty("Id").GetInt32();
+                    var pn = o.TryGetProperty("productName", out var op) ? op.GetString() : o.GetProperty("ProductName").GetString();
+                    var q = o.TryGetProperty("quantity", out var oq) ? oq.GetInt32() : o.GetProperty("Quantity").GetInt32();
+                    var st = o.TryGetProperty("status", out var os) ? os.GetString() : o.GetProperty("Status").GetString();
+                    <tr>
+                        <td>@pn</td>
+                        <td>@q</td>
+                        <td>@st</td>
+                        <td>
+                            @if (st == "Pending")
+                            {
+                                <form asp-controller="OrderActions" asp-action="MarkComplete" method="post" style="display:inline;">
+                                    <input type="hidden" name="id" value="@oid" />
+                                    <button type="submit" class="btn btn-sm">Mark Complete</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="notifications" class="tab-content" style="display:none;">
+    <div class="card">
+        @if (!notifications.Any()) { <p style="color:var(--text-muted); text-align:center; padding:2rem;">No notifications yet.</p> }
+        @foreach (var n in notifications)
+        {
+            var title = n.TryGetProperty("title", out var t) ? t.GetString() : n.GetProperty("Title").GetString();
+            var msg = n.TryGetProperty("message", out var m) ? m.GetString() : n.GetProperty("Message").GetString();
+            <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <strong>@title</strong><br />
+                <span style="color: var(--text-muted);">@msg</span>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('editId').value = this.dataset.id;
+            document.getElementById('editName').value = this.dataset.name;
+            document.getElementById('editQty').value = this.dataset.qty;
+            document.getElementById('editPrice').value = this.dataset.price;
+            document.getElementById('editModal').style.display = 'flex';
+        });
+    });
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).style.display = 'block';
+        if (btn) btn.classList.add('active');
+    }
+</script>

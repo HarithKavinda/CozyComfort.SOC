@@ -1,0 +1,107 @@
+@using System.Text.Json
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Seller Dashboard";
+    var distStock = ViewBag.DistributorStock as List<JsonElement> ?? new List<JsonElement>();
+    var myStock = ViewBag.MyStock as List<JsonElement> ?? new List<JsonElement>();
+    var notifications = ViewBag.Notifications as List<JsonElement> ?? new List<JsonElement>();
+    var distributors = ViewBag.Distributors as List<JsonElement> ?? new List<JsonElement>();
+}
+
+@if (TempData["Success"] != null) { <div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div> }
+<div class="dashboard-header">
+    <h1><i class="fas fa-store"></i> Seller Dashboard</h1>
+    <p>View distributor stock, place orders, manage your inventory</p>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Distributor Stock (View Only)</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Order</th></tr></thead>
+            <tbody>
+                @if (!distStock.Any()) { <tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:2rem;">No distributor stock available.</td></tr> }
+                @foreach (var item in distStock)
+                {
+                    var name = item.TryGetProperty("productName", out var p) ? p.GetString() : item.GetProperty("ProductName").GetString();
+                    var qty = item.TryGetProperty("quantity", out var q) ? q.GetInt32() : item.GetProperty("Quantity").GetInt32();
+                    var pr = item.TryGetProperty("price", out var pr2) ? pr2.GetDecimal() : item.GetProperty("Price").GetDecimal();
+                    var ownerId = item.TryGetProperty("ownerUserId", out var ou) ? ou.GetInt32() : (item.TryGetProperty("OwnerUserId", out var ou2) ? ou2.GetInt32() : 0);
+                    <tr>
+                        <td>@name</td>
+                        <td>@qty</td>
+                        <td>$@pr.ToString("N2")</td>
+                        <td>
+                            @if (distributors.Any() && ownerId > 0)
+                            {
+                                <form asp-controller="OrderActions" asp-action="PlaceOrderToDistributor" method="post" style="display:inline;">
+                                    <input type="hidden" name="productName" value="@name" />
+                                    <input type="hidden" name="unitPrice" value="@pr" />
+                                    <input type="hidden" name="toUserId" value="@ownerId" />
+                                    <input type="number" name="quantity" min="1" max="@qty" value="1" style="width:60px; display:inline;" />
+                                    <button type="submit" class="btn btn-sm">Order</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">My Stock</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th></tr></thead>
+            <tbody>
+                @if (!myStock.Any()) { <tr><td colspan="3" style="color:var(--text-muted); text-align:center; padding:2rem;">Your stock is empty. Place an order from the distributor.</td></tr> }
+                @foreach (var item in myStock)
+                {
+                    var name = item.TryGetProperty("productName", out var p) ? p.GetString() : item.GetProperty("ProductName").GetString();
+                    var qty = item.TryGetProperty("quantity", out var q) ? q.GetInt32() : item.GetProperty("Quantity").GetInt32();
+                    var pr = item.TryGetProperty("price", out var pr2) ? pr2.GetDecimal() : item.GetProperty("Price").GetDecimal();
+                    <tr><td>@name</td><td>@qty</td><td>$@pr.ToString("N2")</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="tab-container">
+        <button class="tab active" onclick="showTab('notif', this)"><i class="fas fa-bell"></i> Notifications</button>
+        <button class="tab" onclick="showTab('msgs', this)"><i class="fas fa-inbox"></i> Messages from Distributor</button>
+    </div>
+    <div id="notif" class="tab-content">
+    @if (!notifications.Any()) { <p style="color:var(--text-muted); text-align:center; padding:2rem;">No notifications yet.</p> }
+    @foreach (var n in notifications)
+    {
+        var title = n.TryGetProperty("title", out var t) ? t.GetString() : n.GetProperty("Title").GetString();
+        var msg = n.TryGetProperty("message", out var m) ? m.GetString() : n.GetProperty("Message").GetString();
+        <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <strong>@title</strong><br /><span style="color: var(--text-muted);">@msg</span>
+        </div>
+    }
+    </div>
+    <div id="msgs" class="tab-content" style="display:none;">
+        @{ var messages = ViewBag.Messages as List<JsonElement> ?? new List<JsonElement>(); }
+        @if (!messages.Any()) { <p style="color:var(--text-muted); text-align:center; padding:2rem;">No messages from distributor.</p> }
+        @foreach (var msg in messages)
+        {
+            var content = msg.TryGetProperty("content", out var mc) ? mc.GetString() : msg.GetProperty("Content").GetString();
+            var fromId = msg.TryGetProperty("fromUserId", out var mf) ? mf.GetInt32() : msg.GetProperty("FromUserId").GetInt32();
+            <div style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <strong>From Distributor #@fromId</strong><br /><span style="color: var(--text-muted);">@content</span>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        var el = document.getElementById(id); if (el) el.style.display = 'block';
+        if (btn) btn.classList.add('active');
+    }
+</script>

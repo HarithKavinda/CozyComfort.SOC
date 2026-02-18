@@ -1,0 +1,33 @@
+﻿<h2>Register</h2>
+
+@if (ViewBag.Error != null)
+{
+    <p style="color:red">@ViewBag.Error</p>
+}
+
+<form method="post" asp-action="Register">
+
+    <label>Email</label>
+    <input type="text" name="email" required />
+    <br />
+
+    <label>Password</label>
+    <input type="password" name="password" required />
+    <br />
+
+    <label>Role</label>
+    <select name="role">
+        <option value="0">Admin</option>
+        <option value="1">Manufacturer</option>
+        <option value="2">Distributor</option>
+        <option value="3">Seller</option>
+    </select>
+
+    <br /><br />
+    <a href="/Register">Create new account</a>
+    <button type="submit">Register</button>
+
+</form>
+
+<br />
+<a href="/Login">Already have account? Login</a>

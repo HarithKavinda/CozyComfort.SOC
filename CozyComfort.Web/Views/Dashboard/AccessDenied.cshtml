@@ -1,0 +1,12 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="card" style="text-align: center; padding: 4rem;">
+    <i class="fas fa-lock" style="font-size: 4rem; color: var(--danger); margin-bottom: 1rem;"></i>
+    <h1>Access Denied</h1>
+    <p style="color: var(--text-muted); margin: 1rem 0;">You don't have permission to view this page.</p>
+    <a asp-controller="Home" asp-action="Index" class="btn"><i class="fas fa-home"></i> Go to Home</a>
+    <a asp-controller="Auth" asp-action="Login" class="btn btn-outline" style="margin-left: 0.5rem;"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+</div>

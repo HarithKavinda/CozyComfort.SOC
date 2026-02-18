@@ -1,0 +1,68 @@
+@using System.Text.Json
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Customer Dashboard";
+    var sellerStock = ViewBag.SellerStock as List<JsonElement> ?? new List<JsonElement>();
+    var sellers = ViewBag.Sellers as List<JsonElement> ?? new List<JsonElement>();
+    var myOrders = ViewBag.MyOrders as List<JsonElement> ?? new List<JsonElement>();
+}
+
+@if (TempData["Success"] != null) { <div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div> }
+<div class="dashboard-header">
+    <h1><i class="fas fa-shopping-cart"></i> Customer Dashboard</h1>
+    <p>Browse products and make purchases</p>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Available Products (Seller Stock)</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Purchase</th></tr></thead>
+            <tbody>
+                @if (!sellerStock.Any()) { <tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:2rem;">No products available yet.</td></tr> }
+                @foreach (var item in sellerStock)
+                {
+                    var name = item.TryGetProperty("productName", out var p) ? p.GetString() : item.GetProperty("ProductName").GetString();
+                    var qty = item.TryGetProperty("quantity", out var q) ? q.GetInt32() : item.GetProperty("Quantity").GetInt32();
+                    var pr = item.TryGetProperty("price", out var pr2) ? pr2.GetDecimal() : item.GetProperty("Price").GetDecimal();
+                    var ownerId = item.TryGetProperty("ownerUserId", out var ou) ? ou.GetInt32() : (item.TryGetProperty("OwnerUserId", out var ou2) ? ou2.GetInt32() : 0);
+                    <tr>
+                        <td>@name</td>
+                        <td>@qty</td>
+                        <td>$@pr.ToString("N2")</td>
+                        <td>
+                            @if (qty > 0 && sellers.Any() && ownerId > 0)
+                            {
+                                <form asp-controller="OrderActions" asp-action="Purchase" method="post" style="display:inline;">
+                                    <input type="hidden" name="productName" value="@name" />
+                                    <input type="hidden" name="unitPrice" value="@pr" />
+                                    <input type="hidden" name="toUserId" value="@ownerId" />
+                                    <input type="number" name="quantity" min="1" max="@qty" value="1" style="width:60px; display:inline;" />
+                                    <button type="submit" class="btn btn-sm">Purchase</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">My Orders</h3>
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Status</th></tr></thead>
+            <tbody>
+                @if (!myOrders.Any()) { <tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:2rem;">No orders yet.</td></tr> }
+                @foreach (var o in myOrders)
+                {
+                    var pn = o.TryGetProperty("productName", out var op) ? op.GetString() : o.GetProperty("ProductName").GetString();
+                    var q = o.TryGetProperty("quantity", out var oq) ? oq.GetInt32() : o.GetProperty("Quantity").GetInt32();
+                    var up = o.TryGetProperty("unitPrice", out var up2) ? up2.GetDecimal() : (o.TryGetProperty("UnitPrice", out var up3) ? up3.GetDecimal() : 0);
+                    var st = o.TryGetProperty("status", out var os) ? os.GetString() : o.GetProperty("Status").GetString();
+                    <tr><td>@pn</td><td>@q</td><td>$@up.ToString("N2")</td><td>@st</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

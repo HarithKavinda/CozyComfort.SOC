@@ -1,0 +1,78 @@
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="auth-page">
+    <div class="auth-hero">
+        <div class="auth-hero-content">
+            <i class="fas fa-user-plus auth-hero-icon"></i>
+            <h2>Join CozyComfort</h2>
+            <p>Create your account and choose your role in the supply chain.</p>
+            <div class="auth-hero-roles">
+                <span><i class="fas fa-industry"></i> Manufacturer</span>
+                <span><i class="fas fa-truck"></i> Distributor</span>
+                <span><i class="fas fa-store"></i> Seller</span>
+                <span><i class="fas fa-shopping-cart"></i> Customer</span>
+            </div>
+        </div>
+    </div>
+    <div class="auth-form-wrap">
+        <div class="card auth-card">
+            <h2><i class="fas fa-user-plus"></i> Create Account</h2>
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @ViewBag.Error</div>
+            }
+            <form asp-controller="Auth" asp-action="Register" method="post">
+                @Html.AntiForgeryToken()
+                <label><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" name="email" required placeholder="you@example.com" />
+                <label><i class="fas fa-lock"></i> Password</label>
+                <input type="password" name="password" required placeholder="••••••••" />
+                <label><i class="fas fa-user-tag"></i> Role</label>
+                <select name="role" required>
+                    <option value="Manufacturer">Manufacturer</option>
+                    <option value="Distributor">Distributor</option>
+                    <option value="Seller">Seller</option>
+                    <option value="Customer">Customer</option>
+                </select>
+                <button type="submit" class="auth-submit"><i class="fas fa-check"></i> Register</button>
+            </form>
+            <p class="auth-switch">
+                Already have an account? <a asp-controller="Auth" asp-action="Login"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-page { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; min-height: calc(100vh - 180px); }
+    .auth-hero {
+        background: rgba(20, 28, 38, 0.5);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 24px;
+        padding: 2.5rem;
+    }
+    .auth-hero-icon { font-size: 3rem; color: var(--accent); margin-bottom: 1rem; }
+    .auth-hero h2 { margin-bottom: 0.5rem; }
+    .auth-hero p { color: var(--text-muted); margin-bottom: 1.5rem; }
+    .auth-hero-roles { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .auth-hero-roles span {
+        padding: 8px 14px;
+        background: rgba(0,212,170,0.1);
+        border-radius: 10px;
+        font-size: 0.9rem;
+        color: var(--accent);
+    }
+    .auth-form-wrap { max-width: 420px; }
+    .auth-card h2 { margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; }
+    .auth-submit { width: 100%; margin-top: 24px; cursor: pointer; }
+    .auth-switch { margin-top: 1.5rem; text-align: center; color: var(--text-muted); }
+    .auth-switch a { color: var(--accent); text-decoration: none; cursor: pointer; }
+    .auth-switch a:hover { text-decoration: underline; }
+    @@media (max-width: 900px) {
+        .auth-page { grid-template-columns: 1fr; }
+        .auth-hero { order: -1; }
+    }
+</style>
